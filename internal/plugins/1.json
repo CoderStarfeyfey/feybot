@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "city": "武汉市",
+  "info": {
+    "date": "2024-01-31",
+    "week": "星期三",
+    "type": "中雨",
+    "low": "7°C",
+    "high": "9°C",
+    "fengxiang": "东北风",
+    "fengli": "1-3级",
+    "night": {
+      "type": "小雨",
+      "fengxiang": "北风",
+      "fengli": "3-4级"
+    },
+    "air": {
+      "aqi": 92,
+      "aqi_level": 2,
+      "aqi_name": "良",
+      "co": "1",
+      "no2": "36",
+      "o3": "37",
+      "pm10": "71",
+      "pm2.5": "68",
+      "so2": "7"
+    },
+    "tip": "天有点冷，注意保暖~ "
+  }
+}
