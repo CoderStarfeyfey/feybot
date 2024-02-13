@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/CoderStarfeyfey/feybot/internal/utils"
+	"github.com/CoderStarfeyfey/feybot/lib"
 	"net"
 	"strings"
+	"sync"
+	"time"
 )
 
 // 自定义消息以及回复的结构体
@@ -14,19 +17,22 @@ type RequestStruct struct {
 	Uuid       string // 用户唯一标识
 	Groupname  string // 群昵称，取不到或没有的时候为""
 	RequestTxt string // 请求字符串
+	User       interface{}
 }
 type ReplyStruct struct {
 	ReType int //回复类型 如果为1，就是普通消息此时的Retext为消息内容，如果为2，回复图片，此时为图片的路径,如果为3，回复文字+图片
 	ReText string
 }
 
-type PluginFunc func(string, string) (*ReplyStruct, error)
+type PluginFunc func(req *RequestStruct) (*ReplyStruct, error)
+type SpecialPluginFunc func(entity interface{}, req *RequestStruct) error
 type replyMsgStruct struct {
 	ReType int
 	ReText string
 }
 
 var PluginMap map[string]PluginFunc
+var SpecialPluginMap map[string]SpecialPluginFunc
 var DefaultReplyMap = map[string]replyMsgStruct{
 	"你的名字": {
 		ReType: 1,
@@ -130,8 +136,33 @@ func processCommand(command string) string {
 
 }
 
+// 定义一个全局定时任务表
+var ScheduleTasksMap map[string][]lib.Task
+
+type ScheduleIdStruct struct {
+	GlobalId int
+	mu       sync.Mutex
+}
+
+var ScheduleTask *ScheduleIdStruct
+var AllTask *lib.TaskScheduler
+
+func GenerateTaskId() int {
+	ScheduleTask.mu.Lock()
+	defer ScheduleTask.mu.Unlock()
+	ScheduleTask.GlobalId = ScheduleTask.GlobalId + 1
+	return ScheduleTask.GlobalId
+}
+
 func init() {
 	utils.FeyLog.Debug("create plugin map")
 	PluginMap = make(map[string]PluginFunc)
+	SpecialPluginMap = make(map[string]SpecialPluginFunc)
 	CommandHandlers = make(map[string]CommandHandler)
+	ScheduleTask = &ScheduleIdStruct{
+		GlobalId: 1,
+		mu:       sync.Mutex{},
+	}
+	AllTask = lib.NewTaskScheduler(10 * time.Second)
+	AllTask.Start()
 }

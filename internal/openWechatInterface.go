@@ -82,3 +82,25 @@ func GetGroupName(msg *openwechat.Message) (string, string) {
 	group.Detail() // 获取详细信息，保证信息及时更新
 	return group.NickName, ""
 }
+
+func GetGroupObj(msg *openwechat.Message) (group *openwechat.Group, err error) {
+	sender, err := msg.Sender()
+	if err != nil {
+		return nil, fmt.Errorf("Get sender fail")
+	}
+
+	group, terror := sender.AsGroup() // 将sender转为group类型
+	if !terror {
+		return nil, fmt.Errorf("tranfer sender to group fail")
+	}
+	return group, nil
+
+}
+
+func SendMsgToGroupByObj(group *openwechat.Group, content string) error {
+	_, err := group.SendText(content)
+	if err != nil {
+		fmt.Errorf("Send msg to group fail ,Error :%v", err)
+	}
+	return nil
+}

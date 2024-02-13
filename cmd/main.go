@@ -14,6 +14,8 @@ func main() {
 	utils.FeyLogInit()
 	//开启日志的热调试功能
 	go utils.HotDebugInit()
+	//开启监听控制台调试功能
 	go internal.DbgConsoleServiceHandle()
+	//初始化机器人模块
 	bot.FeybotRun()
 }

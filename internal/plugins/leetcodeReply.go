@@ -82,7 +82,7 @@ func init() {
 	internal.PluginMap["LeetcodeReply"] = LeetcodeReply
 }
 
-func LeetcodeReply(uname, uuids string) (*internal.ReplyStruct, error) {
+func LeetcodeReply(req *internal.RequestStruct) (*internal.ReplyStruct, error) {
 	questionTitleSlug, err := GetDailyQuestionTitleSlug()
 	everyURL := path.Join(baseURL, questionTitleSlug)
 	if err != nil {

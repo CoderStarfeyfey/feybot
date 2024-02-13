@@ -9,6 +9,7 @@ func FeybotRun() {
 	bot := openwechat.DefaultBot(openwechat.Desktop) // 桌面模式
 	// 注册消息处理函数
 	bot.MessageHandler = Handle
+
 	// 注册登陆二维码回调
 	bot.UUIDCallback = openwechat.PrintlnQrcodeUrl
 

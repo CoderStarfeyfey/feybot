@@ -21,7 +21,7 @@ type Cal_data struct {
 func init() {
 	internal.PluginMap["HolidaysQuery"] = HolidaysQuery
 }
-func HolidaysQuery(uname, uuids string) (*internal.ReplyStruct, error) {
+func HolidaysQuery(req *internal.RequestStruct) (*internal.ReplyStruct, error) {
 	tmpFilePath, _ := utils.GenPicTempPath()
 	if _, err := os.Stat(tmpFilePath); err == nil {
 		utils.FeyLog.Debugf("Path : %v has been there,use cache to upload")

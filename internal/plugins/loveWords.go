@@ -31,7 +31,7 @@ func Test2() {
 	}
 	fmt.Sprintf(loveResp.Ishan)
 }
-func LoveWords(uname, uuids string) (*internal.ReplyStruct, error) {
+func LoveWords(req *internal.RequestStruct) (*internal.ReplyStruct, error) {
 	var loveResp LoveWordsStruct
 	err := utils.GetHttpRespJson(LoveUrl, &loveResp)
 	if err != nil {

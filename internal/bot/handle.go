@@ -34,6 +34,11 @@ func isHandleDefaultReply(req string, normalReplyMap map[string]config.DefaultRe
 	return false, ""
 }
 
+// 判断字符串前缀是否是特定的字符串
+func startsWith(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+}
+
 // 通用请求处理过程
 func CommonHandleRequest(req *internal.RequestStruct) (*internal.ReplyStruct, error) {
 	//1.处理默认配置中已有的处理方式
@@ -65,22 +70,38 @@ func CommonHandleRequest(req *internal.RequestStruct) (*internal.ReplyStruct, er
 		utils.FeyLog.Debugf("use the default answer to reply")
 		return &internal.ReplyStruct{ReType: value.ReType, ReText: value.ReText}, nil
 	}
-	if feature, ok := config.FeyConfig.Features[req.RequestTxt]; ok {
-		if !feature.Enable ||
-			!feature.EnableGroupWbList[req.Groupname] {
-			return &internal.ReplyStruct{ReType: 1, ReText: "此功能暂时无法使用,请联系管理员授权该功能或者开启功能"}, nil
-		}
-		//用户授权成功并且开启enable,调用插件
-		if funcName, ok := internal.PluginMap[feature.EntryFunctionName]; ok {
-			reply, err := funcName(req.Uname, req.Uuid)
-			if err == nil {
-				utils.FeyLog.Debugf("Find the plugin to use,and run it successfully")
-				return reply, nil
-			} else {
-				utils.FeyLog.Errorf("fail to run the plugin,error:%s", err)
-				return reply, err
+	//只要输入的字符串前面的字串能够匹配到Features就可以
+	for featureName, feature := range config.FeyConfig.Features {
+		if startsWith(req.RequestTxt, featureName) {
+			if !feature.Enable ||
+				!feature.EnableGroupWbList[req.Groupname] {
+				return &internal.ReplyStruct{ReType: 1, ReText: "此功能暂时无法使用,请联系管理员授权该功能或者开启功能"}, nil
+			}
+			//用户授权成功并且开启enable,调用插件
+			if funcName, ok := internal.PluginMap[feature.EntryFunctionName]; ok {
+				reply, err := funcName(req)
+				//这里可能还有被的特殊处理的过程
+				//Todo:这里需要加特殊处理判断如果reply为4直接跳过特殊处理
+				if sppluginFunc, ok := internal.SpecialPluginMap[feature.EntryFunctionName]; ok && reply.ReType == 1 {
+					//这里还是需要做一个类型断言把req.User转化为group对象
+					if group, ok := req.User.(*openwechat.Group); ok {
+						err := sppluginFunc(group, req)
+						if err != nil {
+							utils.FeyLog.Errorf("execute sp tasks fail,error:%v", err)
+							return nil, err
+						}
+					}
+				}
+				if err == nil {
+					utils.FeyLog.Debugf("Find the plugin to use,and run it successfully")
+					return reply, nil
+				} else {
+					utils.FeyLog.Errorf("fail to run the plugin,error:%s", err)
+					return reply, err
+				}
 			}
 		}
+
 	}
 	//不是默认回复，也不是请求插件，全都用通用千问来回答
 	reply, err := plugins.TYQWAutoReply(req)
@@ -91,6 +112,12 @@ func CommonHandleRequest(req *internal.RequestStruct) (*internal.ReplyStruct, er
 		return reply, nil
 	}
 	return nil, nil
+}
+
+// 注册定时任务处理的过程,有些插件需要最原始的msg作为参数，封装的requestStruct并不满足要求
+func SpecialHandleRequest(msg *openwechat.Message, reqContent string) error {
+
+	return nil
 }
 
 // 定义群聊消息结构体
@@ -141,29 +168,26 @@ func (g *GroupMessageHandler) reply(msg *openwechat.Message) error {
 	// 替换掉@文本
 	replaceText := "@" + config.FeyConfig.BotName
 	requestText := strings.TrimSpace(strings.ReplaceAll(msg.Content, replaceText, ""))
-	//临时插入之后由智能识别插件完成
-	//if strings.Contains(replaceText, "帅哥") || strings.Contains(replaceText, "靓仔") {
-	//
-	//	return internal.SendText(msg)
-	//}
+	groupUser, _ := internal.GetGroupObj(msg)
 	reply, err := CommonHandleRequest(&internal.RequestStruct{
 		Uname:      groupSender.DisplayName,
 		Uuid:       groupSender.UserName,
 		Groupname:  groupName,
 		RequestTxt: requestText,
+		User:       groupUser,
 	})
 	if err != nil {
 		//发送错误消息
 		return nil
 	}
-	if reply.ReType == 1 {
+	if reply.ReType == 1 || reply.ReType == 4 {
 		return internal.SendText(msg, reply.ReText)
 	} else if reply.ReType == 2 {
-
 		return internal.SendPic(msg, reply.ReText)
 	} else if reply.ReType == 3 {
 		return internal.SendTextAndPic(msg, reply.ReText)
 	}
+
 	return nil
 }
 func (g *UserMessageHandler) handle(msg *openwechat.Message) error {
